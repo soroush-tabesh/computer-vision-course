@@ -141,14 +141,13 @@ def get_features_distance(fv1, fv2):
     return cv.compareHist(fv1.astype(np.float32), fv2.astype(np.float32), cv.HISTCMP_CHISQR_ALT)
 
 
-fpts1 = my_harris(img1, 5, 0.05, 30, 0.01, True)
+fpts1 = my_harris(img1, 5, 0.05, 30, 0.01, False)
 fvs1 = [get_feature_vector(img1, fpt) for fpt in fpts1]
 
-fpts2 = my_harris(img2, 5, 0.05, 30, 0.01, True)
+fpts2 = my_harris(img2, 5, 0.05, 30, 0.01, False)
 fvs2 = [get_feature_vector(img2, fpt) for fpt in fpts2]
 
 dist = np.zeros((len(fvs1), len(fvs2)))
-
 for i, fv1 in enumerate(fvs1):
     for j, fv2 in enumerate(fvs2):
         dist[i, j] = get_features_distance(fv1, fv2)
@@ -180,10 +179,24 @@ fig, ax = plt.subplots(ncols=2, figsize=(20, 10))
 ax[0].imshow(img1_gray, cmap='gray')
 ax[1].imshow(img2_gray, cmap='gray')
 
+good_pairs = []
+
 for i, m in enumerate(mtc1):
     if mtc2[m] == i and m != -1:
         ax[0].scatter(fpts1[i, 1], fpts1[i, 0])
         ax[1].scatter(fpts2[m, 1], fpts2[m, 0])
+        good_pairs.append((i, m))
 plt.show()
 
 # %%
+
+canvas = np.concatenate([img1_gray, img2_gray], axis=1)
+plt.figure(figsize=(20, 10))
+plt.imshow(canvas, cmap='gray')
+
+for pair in good_pairs:
+    pp = np.hstack([fpts1[pair[0]], fpts2[pair[1]]])
+    plt.plot([fpts1[pair[0]][1], fpts2[pair[1]][1] + img1.shape[1]],
+             [fpts1[pair[0]][0], fpts2[pair[1]][0]], 'x-', linewidth=1, markersize=12)
+
+plt.show()
