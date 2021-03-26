@@ -50,9 +50,9 @@ plt.show()
 
 # %%
 
-def get_derivatives(src, ksize=3):
-    d_x = cv.Sobel(src, cv.CV_64F, 1, 0, ksize=ksize, borderType=cv.BORDER_REFLECT101)
-    d_y = cv.Sobel(src, cv.CV_64F, 0, 1, ksize=ksize, borderType=cv.BORDER_REFLECT101)
+def get_derivatives(src, k_size=3):
+    d_x = cv.Sobel(src, cv.CV_64F, 1, 0, ksize=k_size, borderType=cv.BORDER_REFLECT101)
+    d_y = cv.Sobel(src, cv.CV_64F, 0, 1, ksize=k_size, borderType=cv.BORDER_REFLECT101)
     return d_x, d_y
 
 
@@ -62,9 +62,10 @@ def get_structure_tensor(src, sigma):
     d2_y = d_y ** 2
     d_xy = d_x * d_y
 
-    s2_x = cv.GaussianBlur(d2_x, (4 * sigma + 1, 4 * sigma + 1), sigma)
-    s2_y = cv.GaussianBlur(d2_y, (4 * sigma + 1, 4 * sigma + 1), sigma)
-    s_xy = cv.GaussianBlur(d_xy, (4 * sigma + 1, 4 * sigma + 1), sigma)
+    k_size = (int(4 * sigma + 1), int(4 * sigma + 1))
+    s2_x = cv.GaussianBlur(d2_x, k_size, sigma)
+    s2_y = cv.GaussianBlur(d2_y, k_size, sigma)
+    s_xy = cv.GaussianBlur(d_xy, k_size, sigma)
 
     return s2_x, s_xy, s2_y
 
@@ -112,8 +113,8 @@ def my_harris(src, sigma=5.0, k=0.05, min_dist=50, thresh=0.01, show=False):
     return coords
 
 
-my_harris(img1, 0.012, True)
-my_harris(img2, 0.012, True)
+my_harris(img1, thresh=0.01, show=True)
+my_harris(img2, thresh=0.01, show=True)
 
 
 # %%
@@ -140,10 +141,10 @@ def get_features_distance(fv1, fv2):
     return cv.compareHist(fv1.astype(np.float32), fv2.astype(np.float32), cv.HISTCMP_CHISQR_ALT)
 
 
-fpts1 = non_max_suppression(calc_harris(img1_gray, 5, 0.05), min_dist=30, thresh=0.01)
+fpts1 = my_harris(img1, 5, 0.05, 30, 0.01, True)
 fvs1 = [get_feature_vector(img1, fpt) for fpt in fpts1]
 
-fpts2 = non_max_suppression(calc_harris(img2_gray, 5, 0.05), min_dist=30, thresh=0.01)
+fpts2 = my_harris(img2, 5, 0.05, 30, 0.01, True)
 fvs2 = [get_feature_vector(img2, fpt) for fpt in fpts2]
 
 dist = np.zeros((len(fvs1), len(fvs2)))
@@ -175,7 +176,7 @@ for i in range(dist.shape[1]):
 # mtc2 = [np.argmin(dist[:, i]) for i in range(dist.shape[1])]
 
 plt.close()
-fig, ax = plt.subplots(ncols=2, figsize=(10, 10))
+fig, ax = plt.subplots(ncols=2, figsize=(20, 10))
 ax[0].imshow(img1_gray, cmap='gray')
 ax[1].imshow(img2_gray, cmap='gray')
 
