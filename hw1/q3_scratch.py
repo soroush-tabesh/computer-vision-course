@@ -28,8 +28,8 @@ imshow(img1, img2)
 # %%
 sift = cv.SIFT_create()
 
-kp1, des1 = sift.detectAndCompute(img1_c, None)
-kp2, des2 = sift.detectAndCompute(img2_c, None)
+kp1, des1 = sift.detectAndCompute(img1, None)
+kp2, des2 = sift.detectAndCompute(img2, None)
 
 imshow(cv.drawKeypoints(img1, kp1, None, flags=cv.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS),
        cv.drawKeypoints(img2, kp2, None, flags=cv.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS))
@@ -40,25 +40,23 @@ bf = cv.BFMatcher_create(cv.NORM_L2, crossCheck=True)
 matches = bf.match(des1, des2)
 matches = sorted(matches, key=lambda x: x.distance)
 # %%
-nn = 1000
 
-# img3 = cv.drawMatches(img1, kp1, img2, kp2, matches[:], None, flags=2)
-# imshow(img3)
+img1_final_points = np.float32([kp1[m.queryIdx].pt for m in matches[:]])
+img2_final_points = np.float32([kp2[m.trainIdx].pt for m in matches[:]])
 
-src_pts = np.float32([kp1[m.queryIdx].pt for m in matches[:]])[:, ::-1]
-dst_pts = np.float32([kp2[m.trainIdx].pt for m in matches[:]])[:, ::-1]
-
-M, mask = cv.findHomography(dst_pts, src_pts, cv.RANSAC, ransacReprojThreshold=3, maxIters=2000, confidence=0.995)
+M, mask = cv.findHomography(img2_final_points, img1_final_points, cv.RANSAC,
+                            ransacReprojThreshold=3,
+                            maxIters=200000,
+                            confidence=0.995)
 img4 = cv.warpPerspective(img2, M, img1.shape[:2][::-1])
 
-imshow(img4, img1)
-
-draw_params = dict(matchColor=(0, 255, 0),  # draw matches in green color
-                   singlePointColor=None,
-                   matchesMask=mask,  # draw only inliers
-                   flags=2)
-
-img3 = cv.drawMatches(img1, kp1, img2, kp2, matches, None, **draw_params)
+imshow(img1, img4)
+# %%
+img3 = cv.drawMatches(img1, kp1, img2, kp2, matches, None,
+                      matchColor=(0, 255, 0),  # draw matches in green color
+                      singlePointColor=(0, 0, 255),
+                      matchesMask=mask,  # draw only inliers
+                      flags=2)
 imshow(img3)
 # %%
 matches = [matches[i] for i in range(len(matches)) if mask[i, 0] > 0]
