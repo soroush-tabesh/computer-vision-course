@@ -7,11 +7,14 @@ from skimage import util, filters, color, feature, morphology
 
 def imshow(*srcs):
     plt.close()
-    for src in srcs:
-        plt.figure(figsize=(10, 10))
+    fig, ax = plt.subplots(ncols=len(srcs), figsize=(len(srcs) * 10, 10))
+    for i, src in enumerate(srcs):
         t = (src - src.min()) / (src.max() - src.min())
-        plt.imshow(t)
-        plt.show()
+        if (len(srcs)) > 1:
+            ax[i].imshow(t, cmap='gray')
+        else:
+            ax.imshow(t, cmap='gray')
+    plt.show()
 
 
 img1 = util.img_as_float64(plt.imread('./data/hw1/im01.jpg'))
@@ -84,6 +87,12 @@ imshow(tt, np.where(tt > 0.02, tt, 0))
 plt.hist(np.ravel(tt), log='y')
 plt.axvline(filters.threshold_otsu(tt), color='r')
 plt.show()
+
+# %%
+d_x, d_y = get_derivatives(img1)
+ff = np.sqrt(d_x ** 2 + d_y ** 2)
+ff /= ff.max()
+plt.imsave('chert.jpg', ff)
 
 
 # %%
