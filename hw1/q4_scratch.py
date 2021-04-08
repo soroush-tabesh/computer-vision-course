@@ -23,11 +23,24 @@ def apply_transform(src_points, mat):
     return dst_points[:, :2] / dst_points[:, 2][:, None]
 
 
+def normalizer_2d(points):
+    points = np.array(points, dtype=np.float64)
+    mean = np.average(points, axis=0)
+    std = np.std(points, axis=0)
+    std = np.maximum(std, np.ones_like(std) / 100)
+    mat = np.array([[1 / std[0], 0, -mean[0] / std[0]],
+                    [0, 1 / std[1], -mean[1] / std[1]],
+                    [0, 0, 1]])
+    return apply_transform(points, mat), mat
+
+
 def find_homography_lsq(src_points, dst_points, mask=None, invert=True):
     src_points = np.array(src_points, dtype=np.float64)
     dst_points = np.array(dst_points, dtype=np.float64)
     if mask is None:
         mask = np.ones(src_points.shape[0], dtype=np.bool)
+    src_points, t1 = normalizer_2d(src_points)
+    dst_points, t2 = normalizer_2d(dst_points)
     mat = np.zeros((2 * src_points.shape[0], 9))
     for i, (pt1, pt2, val) in enumerate(zip(src_points, dst_points, mask)):
         if not val:
@@ -37,7 +50,10 @@ def find_homography_lsq(src_points, dst_points, mask=None, invert=True):
         mat[2 * i] = np.array([-pt1[0], -pt1[1], -1, 0, 0, 0, pt1[0] * pt2[1], pt1[1] * pt2[1], pt2[1]])
         mat[2 * i + 1] = np.array([0, 0, 0, -pt1[0], -pt1[1], -1, pt1[0] * pt2[0], pt1[1] * pt2[0], pt2[0]])
     u, s, vh = np.linalg.svd(mat, full_matrices=True)
-    return vh[-1, :].reshape((3, 3))
+    h = vh[-1, :].reshape((3, 3))
+    h = np.matmul(h, t1)
+    h = np.matmul(np.linalg.inv(t2), h)
+    return h
 
 
 def find_homography_ransac(src_points, dst_points,
