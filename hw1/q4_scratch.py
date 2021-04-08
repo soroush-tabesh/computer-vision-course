@@ -70,3 +70,34 @@ def find_homography_ransac(src_points, dst_points,
     src_final_points = np.array([p for i, p in enumerate(src_points) if best_sample_inliers[i]], dtype=np.float64)
     dst_final_points = np.array([p for i, p in enumerate(dst_points) if best_sample_inliers[i]], dtype=np.float64)
     return find_homography_lsq(src_final_points, dst_final_points), best_sample_inliers
+
+
+# %%
+img1 = plt.imread('./data/hw1/im03.jpg')
+img2 = plt.imread('./data/hw1/im04.jpg')
+
+img1_c = cv.cvtColor(img1, cv.COLOR_RGB2GRAY)
+img2_c = cv.cvtColor(img2, cv.COLOR_RGB2GRAY)
+
+imshow(img1, img2)
+
+# %%
+sift = cv.SIFT_create()
+
+kp1, des1 = sift.detectAndCompute(img1, None)
+kp2, des2 = sift.detectAndCompute(img2, None)
+
+# %%
+bf = cv.BFMatcher_create(cv.NORM_L2, crossCheck=True)
+
+matches = bf.match(des1, des2)
+matches = sorted(matches, key=lambda x: x.distance)
+
+# %%
+img1_final_points = np.float64([kp1[m.queryIdx].pt for m in matches])
+img2_final_points = np.float64([kp2[m.trainIdx].pt for m in matches])
+
+M, mask = find_homography_ransac(img2_final_points, img1_final_points, max_iterations=300_000, inlier_threshold=4)
+img4 = cv.warpPerspective(img2, M, img1.shape[:2][::-1])
+
+imshow(img1, img4)
