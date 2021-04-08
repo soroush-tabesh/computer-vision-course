@@ -18,17 +18,21 @@ def imshow(*srcs):
 
 def apply_transform(src_points, mat):
     src_points = np.array(src_points, dtype=float)
-    src_points = np.hstack(src_points, np.ones(src_points.shape[:1], dtype=float))
+    src_points = np.hstack(src_points, np.ones(src_points.shape[0], dtype=float))
     return np.matmul(mat, src_points)[:, :2]
 
 
-def find_homography_lsq(src_points, dst_points):
+def find_homography_lsq(src_points, dst_points, mask=None, invert=True):
+    if mask is None:
+        mask = np.ones(src_points.shape[0], dtype=np.bool)
     src_points = np.array(src_points)
     dst_points = np.array(dst_points)
     mat = np.zeros((2 * src_points.shape[0], 9))
-    for i, (pt1, pt2) in enumerate(zip(src_points, dst_points)):
-        # pt1 = pt1[::-1]
-        pt2 = pt2[::-1]
+    for i, (pt1, pt2, val) in enumerate(zip(src_points, dst_points, mask)):
+        if not val:
+            continue
+        if invert:
+            pt2 = pt2[::-1]
         mat[2 * i] = np.array([-pt1[0], -pt1[1], -1, 0, 0, 0, pt1[0] * pt2[1], pt1[1] * pt2[1], pt2[1]])
         mat[2 * i + 1] = np.array([0, 0, 0, -pt1[0], -pt1[1], -1, pt1[0] * pt2[0], pt1[1] * pt2[0], pt2[0]])
     u, s, vh = np.linalg.svd(mat, full_matrices=True)
