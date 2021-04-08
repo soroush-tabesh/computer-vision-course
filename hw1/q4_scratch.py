@@ -17,9 +17,10 @@ def imshow(*srcs):
 
 
 def apply_transform(src_points, mat):
-    src_points = np.array(src_points, dtype=float)
-    src_points = np.hstack(src_points, np.ones(src_points.shape[0], dtype=float))
-    return np.matmul(mat, src_points)[:, :2]
+    src_points = np.array(src_points, dtype=np.float64)
+    src_points = np.hstack([src_points, np.ones(src_points.shape[0], dtype=np.float64)[:, None]])
+    dst_points = np.matmul(mat, src_points.T).T
+    return dst_points[:, :2] / dst_points[:, 2][:, None]
 
 
 def find_homography_lsq(src_points, dst_points, mask=None, invert=True):
