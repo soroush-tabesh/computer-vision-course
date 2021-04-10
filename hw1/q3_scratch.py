@@ -51,9 +51,26 @@ img4 = cv.warpPerspective(img2, M, img1.shape[:2][::-1])
 
 imshow(img1, img4)
 # %%
-img3 = cv.drawMatches(img1, kp1, img2, kp2, matches, None,
-                      matchColor=(0, 255, 0),  # draw matches in green color
-                      singlePointColor=(0, 0, 255),
-                      matchesMask=mask,  # draw only inliers
-                      flags=2)
-imshow(img3)
+img3_3 = cv.drawMatches(img1, kp1, img2, kp2, matches[:50], None,
+                        matchColor=(0, 255, 0),  # draw matches in green color
+                        # singlePointColor=(0, 0, 255),
+                        flags=cv.DRAW_MATCHES_FLAGS_NOT_DRAW_SINGLE_POINTS)
+imshow(img3_3)
+# %%
+img3_1 = cv.drawMatches(img1, kp1, img2, kp2, matches, None,
+                        matchColor=(0, 255, 0),  # draw matches in green color
+                        singlePointColor=(0, 0, 255),
+                        matchesMask=(mask),  # draw only inliers
+                        flags=cv.DRAW_MATCHES_FLAGS_DEFAULT)
+img3_2 = cv.drawMatches(img1, kp1, img2, kp2, matches, None,
+                        matchColor=(255, 0, 0),  # draw matches in green color
+                        singlePointColor=(0, 0, 255),
+                        matchesMask=(1 - mask),  # draw only inliers
+                        flags=cv.DRAW_MATCHES_FLAGS_DEFAULT)
+# imshow((img3_1.astype(np.int) + img3_2.astype(np.int)) // 2)
+# imshow(img3_1)
+# %%
+plt.imshow(img1, extent=(10, 20, 30, 40))
+plt.show()
+# for match, flag in zip(matches, mask):
+#     plt
