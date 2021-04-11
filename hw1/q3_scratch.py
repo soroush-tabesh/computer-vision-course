@@ -34,10 +34,13 @@ imshow(cv.drawKeypoints(img1, kp1, None, flags=cv.DRAW_MATCHES_FLAGS_DRAW_RICH_K
        cv.drawKeypoints(img2, kp2, None, flags=cv.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS))
 
 # %%
-bf = cv.BFMatcher_create(cv.NORM_L2, crossCheck=True)
-
-matches = bf.match(des1, des2)
-matches = sorted(matches, key=lambda x: x.distance)
+# bf = cv.BFMatcher_create(cv.NORM_L2, crossCheck=True)
+#
+# matches = bf.match(des1, des2)
+# matches = sorted(matches, key=lambda x: x.distance)
+match_ratio_threshold = 0.7
+matches = cv.BFMatcher().knnMatch(des1, des2, k=2)
+matches = [m1 for m1, m2 in matches if m1.distance < match_ratio_threshold * m2.distance]
 # %%
 
 img1_final_points = np.float32([kp1[m.queryIdx].pt for m in matches])

@@ -16,10 +16,9 @@ img_corners = cv.drawMatches(img1, kp1, img2, kp2, None, None, singlePointColor=
 plt.imsave('./out/res13_corners.jpg', img_corners)
 
 # %%
-bf = cv.BFMatcher_create(cv.NORM_L2, crossCheck=True)
-
-matches = bf.match(des1, des2)
-matches = sorted(matches, key=lambda x: x.distance)
+match_ratio_threshold = 0.7
+matches = cv.BFMatcher().knnMatch(des1, des2, k=2)
+matches = [m1 for m1, m2 in matches if m1.distance < match_ratio_threshold * m2.distance]
 # %%
 img_correspondence = img_corners.copy()
 for match in matches:
@@ -48,8 +47,8 @@ img1_final_points = np.float32([kp1[m.queryIdx].pt for m in matches])
 img2_final_points = np.float32([kp2[m.trainIdx].pt for m in matches])
 
 M, mask = cv.findHomography(img2_final_points, img1_final_points, cv.RANSAC,
-                            ransacReprojThreshold=3,
-                            maxIters=500000,
+                            ransacReprojThreshold=5,
+                            maxIters=5000,
                             confidence=0.995)
 
 # %%
@@ -62,17 +61,6 @@ cv.drawMatches(img1, kp1, img2, kp2, matches, img_inliers, matchColor=(255, 0, 0
                matchesMask=mask,
                flags=cv.DRAW_MATCHES_FLAGS_DRAW_OVER_OUTIMG + cv.DRAW_MATCHES_FLAGS_NOT_DRAW_SINGLE_POINTS)
 plt.imsave('./out/res17.jpg', img_inliers)
-
-# %%
-
-M_p, mask_p = cv.findHomography(img2_final_points, img1_final_points, cv.RANSAC,
-                                ransacReprojThreshold=3,
-                                maxIters=5000,
-                                confidence=0.995)
-img_mismatch = cv.drawMatches(img1, kp1, img2, kp2, matches, None, matchColor=(255, 0, 0), singlePointColor=(255, 0, 0),
-                              matchesMask=mask_p,
-                              flags=cv.DRAW_MATCHES_FLAGS_NOT_DRAW_SINGLE_POINTS)
-plt.imsave('./out/res18_mismatch.jpg', img_mismatch)
 
 # %%
 img2_warped = cv.warpPerspective(img2, M, img1.shape[:2][::-1])
