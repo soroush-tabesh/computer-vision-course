@@ -117,3 +117,15 @@ M, mask = find_homography_ransac(img2_final_points, img1_final_points, max_itera
 img4 = cv.warpPerspective(img2, M, img1.shape[:2][::-1])
 
 imshow(img1, img4)
+
+# %%
+src_points = np.float32([[0, 0], [0, img2.shape[0]], [img2.shape[1], img2.shape[0]], [img2.shape[1], 0]])
+predicted_dst = cv.perspectiveTransform(src_points.reshape(-1, 1, 2), M).reshape(src_points.shape)
+p_min = np.min(predicted_dst, axis=0)
+p_max = np.max(predicted_dst, axis=0)
+p_diff = p_max - p_min
+M_t = np.array([[1, 0, -p_min[0]], [0, 1, -p_min[1]], [0, 0, 1]])
+M_p = np.matmul(M_t, M)
+img2_warped_p = cv.warpPerspective(img2, M_p, tuple(p_diff))
+
+imshow(img2_warped_p)
