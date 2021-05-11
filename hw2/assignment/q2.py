@@ -1,4 +1,4 @@
-import cv2
+import cv2 as cv
 import numpy as np
 import glob
 from matplotlib import pyplot as plt
@@ -10,7 +10,7 @@ for image_name in sorted(image_names):
 
 
 # %%
-def get_camera_matrix(images):
+def get_camera_matrix(images, calibration_flags=None):
     board_size = (6, 9)
 
     pts2d = []
@@ -19,16 +19,17 @@ def get_camera_matrix(images):
     pts3d = list(pts3d)
 
     for img in images:
-        img_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        ret, corners = cv2.findChessboardCorners(img_gray, board_size,
-                                                 cv2.CALIB_CB_ADAPTIVE_THRESH +
-                                                 cv2.CALIB_CB_FAST_CHECK +
-                                                 cv2.CALIB_CB_NORMALIZE_IMAGE)
-        corners2 = cv2.cornerSubPix(img_gray, corners, (11, 11), (-1, -1),
-                                    (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 50, 0.0001))
+        img_gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
+        ret, corners = cv.findChessboardCorners(img_gray, board_size,
+                                                cv.CALIB_CB_ADAPTIVE_THRESH |
+                                                cv.CALIB_CB_FAST_CHECK |
+                                                cv.CALIB_CB_NORMALIZE_IMAGE)
+        corners2 = cv.cornerSubPix(img_gray, corners, (11, 11), (-1, -1),
+                                   (cv.TERM_CRITERIA_EPS + cv.TERM_CRITERIA_MAX_ITER, 50, 0.0001))
         pts2d.append(corners2)
 
-    _, mtx, _, _, _ = cv2.calibrateCamera(pts3d, pts2d, images[0].shape[:2][::-1], None, None)
+    ret, mtx, dis, rs, ts = cv.calibrateCamera(pts3d, pts2d, images[0].shape[:2][::-1], None, None,
+                                               flags=calibration_flags)
     return mtx
 
 
@@ -52,4 +53,6 @@ for i, matA in enumerate(mats):
 print(dists)
 
 # %%
-print(f'Focal Distance = {get_camera_matrix(all_images[0:20])[0, 0]:.2f}px')
+mat = get_camera_matrix(all_images[0:20],
+                        calibration_flags=cv.CALIB_FIX_ASPECT_RATIO | cv.CALIB_FIX_PRINCIPAL_POINT)
+print(f'Focal Distance = {mat[0, 0]:.2f}px')
