@@ -1,3 +1,4 @@
+# %%
 import cv2 as cv
 import time
 import numpy as np
@@ -23,8 +24,6 @@ def imshow(*srcs, bgr=False, explicit=True):
 
 
 img_o = plt.imread('./data/hw3/vns.jpg')
-
-# imshow(img_o)
 
 segments_x = np.array([[3542, 969, 3956, 1087],
                        [3604, 1283, 4014, 1376],
@@ -131,6 +130,7 @@ vx = find_intersection_by_lines(lines_x)
 vy = find_intersection_by_lines(lines_y)
 vz = find_intersection_by_lines(lines_z)
 
+# res02
 plt.imshow(img_o)
 plt.scatter(vx[0], vx[1], s=5, label='x', marker='+')
 plt.scatter(vy[0], vy[1], s=5, label='y', marker='+')
@@ -140,6 +140,7 @@ plt.show()
 
 
 # %% manual line detection
+
 def tellme(s):
     print(s)
     plt.title(s, fontsize=16)
@@ -206,6 +207,7 @@ vx = find_intersection_by_segments(segments_x)
 vy = find_intersection_by_segments(segments_y)
 vz = find_intersection_by_segments(segments_z)
 
+# res02
 plt.scatter(vx[0], vx[1], s=1)
 plt.scatter(vy[0], vy[1], s=1)
 # plt.scatter(vz[0], vz[1], s=1)
@@ -241,7 +243,8 @@ K = np.array([[f, 0, p[0]],
               [0, f, p[1]],
               [0, 0, 1]])
 Ki = np.linalg.inv(K)
-# %%
+# %% res03
+plt.title(f'focal length is {f}px')
 plt.imshow(img_o)
 plt.scatter(p[0], p[1])
 plt.show()
