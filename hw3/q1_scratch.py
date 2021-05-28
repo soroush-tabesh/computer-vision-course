@@ -198,7 +198,10 @@ def find_intersection_by_segments(segments):
             A[i, 0] = (y2 - y1) / (x2 - x1)
             A[i, 1] = -1
             b[i] = np.dot(A[i, :], segments[i, :2])
-    return np.append(np.linalg.lstsq(A, b, rcond=None)[0], [1])
+    res = np.append(np.linalg.lstsq(A, b, rcond=None)[0], [1])
+    res = np.round(res)
+    res = res.astype(np.int)
+    return res
 
 
 plt.imshow(img_o)
@@ -207,25 +210,25 @@ vx = find_intersection_by_segments(segments_x)
 vy = find_intersection_by_segments(segments_y)
 vz = find_intersection_by_segments(segments_z)
 
+# res01
+frame = np.zeros((img_o.shape[0] + 300, img_o.shape[1] + 300, 3), dtype=np.uint8)
+frame[:img_o.shape[0], :img_o.shape[1]] = img_o
+cv.line(frame, (vx[0], vx[1]), (vy[0], vy[1]), (255, 0, 0), 6)
+plt.imshow(frame)
+plt.show()
+
 # res02
+plt.imshow(img_o)
 plt.scatter(vx[0], vx[1], s=1)
 plt.scatter(vy[0], vy[1], s=1)
-# plt.scatter(vz[0], vz[1], s=1)
+plt.scatter(vz[0], vz[1], s=1)
 plt.plot([vx[0], vy[0]], [vx[1], vy[1]], linewidth=1, marker='+')
-
-# for line in segments_z:
-#     # plt.plot(line[::2], line[1:][::2], c='g')
-#     x1, y1, x2, y2 = line
-#     if x2 - x1 != 0:
-#         m = (y2 - y1) / (x2 - x1)
-#     else:
-#         m = 10000 * np.sign(y2 - y1)
-#     plt.plot((x1 - 10000, x1 + 10000), (int(y1 - 10000 * m), int(y2 + 10000 * m)), c='g')
-
 plt.show()
 
 
 # %%
+
+
 def find_focal_principal(vpts):
     A = np.array([[vpts[0][0] - vpts[2][0], vpts[0][1] - vpts[2][1]],
                   [vpts[1][0] - vpts[2][0], vpts[1][1] - vpts[2][1]]])
@@ -244,7 +247,7 @@ K = np.array([[f, 0, p[0]],
               [0, 0, 1]])
 Ki = np.linalg.inv(K)
 # %% res03
-plt.title(f'focal length is {f}px')
+plt.title(f'focal length is {f:.2f}px')
 plt.imshow(img_o)
 plt.scatter(p[0], p[1])
 plt.show()
@@ -270,4 +273,5 @@ xrd = np.arcsin(nrm[2] / np.linalg.norm(nrm))
 R = Rotation.from_euler('x', xrd).as_matrix() @ Rotation.from_euler('z', -zrd).as_matrix()
 H = K @ R @ Ki
 res = cv.warpPerspective(img_o, H, img_o.shape[:2][::-1])
+# res04
 imshow(res)
