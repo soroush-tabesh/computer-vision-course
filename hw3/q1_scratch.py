@@ -2,8 +2,7 @@ import cv2 as cv
 import time
 import numpy as np
 from matplotlib import pyplot as plt
-from sklearn.cluster import KMeans, spectral_clustering
-from scipy.cluster.hierarchy import fclusterdata
+from sklearn.cluster import spectral_clustering
 
 
 def imshow(*srcs, bgr=False, explicit=True):
@@ -54,7 +53,7 @@ segments_z = np.array([[2099, 2057, 2068, 1259],
                        [1654, 2494, 1577, 705],
                        [2992, 1334, 2952, 471]])
 
-# %% Automatic line detection
+# %% hough test
 # preparation
 
 img = img_o.copy()
@@ -62,12 +61,11 @@ img = cv.GaussianBlur(img, (0, 0), 9)
 img = cv.cvtColor(img, cv.COLOR_RGB2GRAY)
 edges = cv.Canny(img, 10, 30, L2gradient=True)
 imshow(edges)
-
 # %%
-lines = cv.HoughLines(edges, 3, np.pi / 180, 460)
+lines = cv.HoughLines(edges, 2, np.pi / 180, 350)
 lines = np.array(sorted(lines, key=lambda x: x[0, 1])[:])
-# frame = np.zeros_like(img_o) + 255
-frame = img_o.copy()
+frame = np.zeros_like(img_o) + 255
+# frame = img_o.copy()
 
 for line in lines:
     rho, theta = line[0]
@@ -93,7 +91,7 @@ plt.show()
 # plt.scatter(lines[:, 0, 0], lines[:, 0, 1], s=0.2)
 # plt.show()
 
-# %%
+# %% automatic detection
 def my_metric(p1, p2):
     d = np.linalg.norm(p1 - p2)
     return np.pi / 2 - min(d, np.pi - d)
@@ -128,9 +126,10 @@ vy = find_intersection_by_lines(lines_y)
 vz = find_intersection_by_lines(lines_z)
 
 plt.imshow(img_o)
-plt.scatter(vx[0], vx[1], s=1)
-plt.scatter(vy[0], vy[1], s=1)
-plt.scatter(vz[0], vz[1], s=1)
+plt.scatter(vx[0], vx[1], s=5, label='x', marker='+')
+plt.scatter(vy[0], vy[1], s=5, label='y', marker='+')
+plt.scatter(vz[0], vz[1], s=5, label='z', marker='+')
+plt.legend()
 plt.show()
 
 
@@ -203,7 +202,7 @@ vz = find_intersection_by_segments(segments_z)
 
 plt.scatter(vx[0], vx[1], s=1)
 plt.scatter(vy[0], vy[1], s=1)
-# plt.scatter(vz[0], vz[1], s=1)
+plt.scatter(vz[0], vz[1], s=1)
 plt.plot([vx[0], vy[0]], [vx[1], vy[1]], linewidth=1, marker='+')
 
 # for line in segments_z:
@@ -231,6 +230,7 @@ def find_focal_principal(vpts):
 
 
 p, f = find_focal_principal([vx, vy, vz])
+print(p, f)
 K = np.array([[f, 0, p[0]],
               [0, f, p[1]],
               [0, 0, 1]])
