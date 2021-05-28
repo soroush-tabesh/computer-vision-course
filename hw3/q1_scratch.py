@@ -3,6 +3,7 @@ import time
 import numpy as np
 from matplotlib import pyplot as plt
 from sklearn.cluster import spectral_clustering
+from scipy.spatial.transform import Rotation
 
 
 def imshow(*srcs, bgr=False, explicit=True):
@@ -57,13 +58,15 @@ segments_z = np.array([[2099, 2057, 2068, 1259],
 # preparation
 
 img = img_o.copy()
-img = cv.GaussianBlur(img, (0, 0), 9)
+img = cv.GaussianBlur(img, (5, 5), 0)
 img = cv.cvtColor(img, cv.COLOR_RGB2GRAY)
-edges = cv.Canny(img, 10, 30, L2gradient=True)
+img = cv.morphologyEx(img, cv.MORPH_OPEN, np.ones((11, 11), dtype=np.uint8))
+edges = cv.Canny(img, 120, 3 * 120, L2gradient=True)
 imshow(edges)
+
 # %%
-lines = cv.HoughLines(edges, 2, np.pi / 180, 350)
-lines = np.array(sorted(lines, key=lambda x: x[0, 1])[:])
+lines = cv.HoughLines(edges, 1, np.pi / 180, 150)
+# lines = np.array(sorted(lines, key=lambda x: x[0, 1])[:])
 frame = np.zeros_like(img_o) + 255
 # frame = img_o.copy()
 
@@ -97,11 +100,14 @@ def my_metric(p1, p2):
     return np.pi / 2 - min(d, np.pi - d)
 
 
-def auto_detect_axis_lines(src, sigma=9, canny1=10, canny2=30, rho=3, theta=np.pi / 180, hough_thresh=460):
+def auto_detect_axis_lines(src, sigma=5, morph=11, canny1=115, canny2=3 * 115, rho=1, theta=np.pi / 180,
+                           hough_thresh=150):
     src = src.copy()
-    src = cv.GaussianBlur(src, (0, 0), sigma)
+    src = cv.GaussianBlur(src, (sigma, sigma), 0)
     src = cv.cvtColor(src, cv.COLOR_RGB2GRAY)
-    edges = cv.Canny(src, canny1, canny2, L2gradient=True)
+    src = cv.morphologyEx(src, cv.MORPH_OPEN, np.ones((morph, morph), dtype=np.uint8))
+    edges = cv.Canny(src, canny1, canny2, L2gradient=False)
+    imshow(edges)
     lines = cv.HoughLines(edges, rho, theta, hough_thresh)
 
     dists = np.array([[my_metric(a[0, 1], b[0, 1]) for b in lines] for a in lines])
@@ -202,7 +208,7 @@ vz = find_intersection_by_segments(segments_z)
 
 plt.scatter(vx[0], vx[1], s=1)
 plt.scatter(vy[0], vy[1], s=1)
-plt.scatter(vz[0], vz[1], s=1)
+# plt.scatter(vz[0], vz[1], s=1)
 plt.plot([vx[0], vy[0]], [vx[1], vy[1]], linewidth=1, marker='+')
 
 # for line in segments_z:
@@ -235,3 +241,30 @@ K = np.array([[f, 0, p[0]],
               [0, f, p[1]],
               [0, 0, 1]])
 Ki = np.linalg.inv(K)
+# %%
+plt.imshow(img_o)
+plt.scatter(p[0], p[1])
+plt.show()
+
+# %%
+# def get_lambda(B, v):
+#     return 1 / np.sqrt(v @ B @ v)
+#
+#
+# B = Ki.T @ Ki
+# lx = get_lambda(B, vx)
+# ly = get_lambda(B, vy)
+# lz = get_lambda(B, vz)
+# R = Ki @ np.vstack((lx * vx, ly * vy, lz * vz)).T
+# %%
+nrm = np.cross(Ki @ vx, Ki @ vy)
+nrm /= np.linalg.norm(nrm[:2])
+zrd = np.arctan2(nrm[1], nrm[0]) + np.pi / 2
+# zrd /= np.pi / 180
+xrd = np.arcsin(nrm[2] / np.linalg.norm(nrm))
+# xrd /= np.pi / 180
+# %%
+R = Rotation.from_euler('x', xrd).as_matrix() @ Rotation.from_euler('z', -zrd).as_matrix()
+H = K @ R @ Ki
+res = cv.warpPerspective(img_o, H, img_o.shape[:2][::-1])
+imshow(res)
