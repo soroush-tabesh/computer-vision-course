@@ -2,6 +2,8 @@ import cv2 as cv
 import time
 import numpy as np
 from matplotlib import pyplot as plt
+from sklearn.cluster import KMeans, spectral_clustering
+from scipy.cluster.hierarchy import fclusterdata
 
 
 def imshow(*srcs, bgr=False, explicit=True):
@@ -22,38 +24,38 @@ def imshow(*srcs, bgr=False, explicit=True):
 
 img_o = plt.imread('./data/hw3/vns.jpg')
 
-imshow(img_o)
+# imshow(img_o)
 
-lines_x = np.array([[3542, 969, 3956, 1087],
-                    [3604, 1283, 4014, 1376],
-                    [1599, 692, 1991, 787],
-                    [1248, 203, 1653, 322],
-                    [1767, 2665, 2146, 2662],
-                    [1654, 2493, 2049, 2500],
-                    [3619, 2557, 4125, 2559],
-                    [3692, 175, 3971, 295],
-                    [551, 1369, 822, 1406],
-                    [810, 1535, 1042, 1565]])
-lines_y = np.array([[3005, 1025, 3544, 971],
-                    [2062, 1247, 2827, 1171],
-                    [3007, 260, 3691, 175],
-                    [2987, 461, 3653, 384],
-                    [2579, 1990, 2149, 2019],
-                    [3621, 2580, 2961, 2612],
-                    [701, 1057, 387, 1092],
-                    [1161, 201, 702, 264],
-                    [1492, 749, 976, 809],
-                    [2600, 2462, 2168, 2487]])
-lines_z = np.array([[2099, 2057, 2068, 1259],
-                    [2042, 2058, 2004, 1105],
-                    [3613, 2545, 3550, 1246],
-                    [4100, 2294, 4003, 522],
-                    [702, 1059, 681, 282],
-                    [1654, 2494, 1577, 705],
-                    [2992, 1334, 2952, 471]])
+segments_x = np.array([[3542, 969, 3956, 1087],
+                       [3604, 1283, 4014, 1376],
+                       [1599, 692, 1991, 787],
+                       [1248, 203, 1653, 322],
+                       [1767, 2665, 2146, 2662],
+                       [1654, 2493, 2049, 2500],
+                       [3619, 2557, 4125, 2559],
+                       [3692, 175, 3971, 295],
+                       [551, 1369, 822, 1406],
+                       [810, 1535, 1042, 1565]])
+segments_y = np.array([[3005, 1025, 3544, 971],
+                       [2062, 1247, 2827, 1171],
+                       [3007, 260, 3691, 175],
+                       [2987, 461, 3653, 384],
+                       [2579, 1990, 2149, 2019],
+                       [3621, 2580, 2961, 2612],
+                       [701, 1057, 387, 1092],
+                       [1161, 201, 702, 264],
+                       [1492, 749, 976, 809],
+                       [2600, 2462, 2168, 2487]])
+segments_z = np.array([[2099, 2057, 2068, 1259],
+                       [2042, 2058, 2004, 1105],
+                       [3613, 2545, 3550, 1246],
+                       [4100, 2294, 4003, 522],
+                       [702, 1059, 681, 282],
+                       [1654, 2494, 1577, 705],
+                       [2992, 1334, 2952, 471]])
 
-# Automatic line detection
-# %% preparation
+# %% Automatic line detection
+# preparation
 
 img = img_o.copy()
 img = cv.GaussianBlur(img, (0, 0), 9)
@@ -64,7 +66,9 @@ imshow(edges)
 # %%
 lines = cv.HoughLines(edges, 3, np.pi / 180, 460)
 lines = np.array(sorted(lines, key=lambda x: x[0, 1])[:])
-frame = np.zeros_like(img_o) + 255
+# frame = np.zeros_like(img_o) + 255
+frame = img_o.copy()
+
 for line in lines:
     rho, theta = line[0]
     a = np.cos(theta)
@@ -75,37 +79,59 @@ for line in lines:
     y1 = int(y0 + 10000 * a)
     x2 = int(x0 - 10000 * (-b))
     y2 = int(y0 - 10000 * a)
-    cv.line(frame, (x1, y1), (x2, y2), (0, 255, 0), 1)
+    cv.line(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
 plt.imshow(frame)
-for line in lines_x:
-    plt.plot(line[::2], line[1:][::2], c='g')
-for line in lines_y:
+for line in segments_x:
+    plt.plot(line[::2], line[1:][::2], c='y')
+for line in segments_y:
     plt.plot(line[::2], line[1:][::2], c='r')
-for line in lines_z:
+for line in segments_z:
     plt.plot(line[::2], line[1:][::2], c='b')
 plt.show()
+
+
 # plt.scatter(lines[:, 0, 0], lines[:, 0, 1], s=0.2)
 # plt.show()
 
 # %%
-lines = cv.HoughLinesP(edges, 1, np.pi / 180, 100)
-frame = np.zeros_like(img_o) + 255
-for line in lines:
-    x1, y1, x2, y2 = line[0]
-    cv.line(frame, (x1, y1), (x2, y2), (255, 0, 0), 3)
-imshow(frame)
+def my_metric(p1, p2):
+    d = np.linalg.norm(p1 - p2)
+    return np.pi / 2 - min(d, np.pi - d)
 
-# %%
-lines = cv.HoughLinesP(edges, 1, np.pi / 180, 100)
-frame = np.zeros_like(img_o) + 255
-for line in lines:
-    x1, y1, x2, y2 = line[0]
-    if x2 - x1 != 0:
-        m = (y2 - y1) / (x2 - x1)
-    else:
-        m = 10000 * np.sign(y2 - y1)
-    cv.line(frame, (x1 - 1000, int(y1 - 1000 * m)), (x1 + 1000, int(y2 + 1000 * m)), (255, 0, 0), 3)
-imshow(frame)
+
+def auto_detect_axis_lines(src, sigma=9, canny1=10, canny2=30, rho=3, theta=np.pi / 180, hough_thresh=460):
+    src = src.copy()
+    src = cv.GaussianBlur(src, (0, 0), sigma)
+    src = cv.cvtColor(src, cv.COLOR_RGB2GRAY)
+    edges = cv.Canny(src, canny1, canny2, L2gradient=True)
+    lines = cv.HoughLines(edges, rho, theta, hough_thresh)
+
+    dists = np.array([[my_metric(a[0, 1], b[0, 1]) for b in lines] for a in lines])
+    labels = spectral_clustering(dists, n_clusters=3, random_state=0)
+
+    return lines[labels == 0], lines[labels == 1], lines[labels == 2]
+
+
+def find_intersection_by_lines(lines):
+    A = np.zeros((len(lines), 2))
+    b = np.zeros(len(lines))
+    for i in range(len(lines)):
+        r, theta = lines[i][0]
+        A[i, :] = np.cos(theta), np.sin(theta)
+        b[i] = r
+    return np.append(np.linalg.lstsq(A, b, rcond=None)[0], [1])
+
+
+lines_z, lines_y, lines_x = auto_detect_axis_lines(img_o)
+vx = find_intersection_by_lines(lines_x)
+vy = find_intersection_by_lines(lines_y)
+vz = find_intersection_by_lines(lines_z)
+
+plt.imshow(img_o)
+plt.scatter(vx[0], vx[1], s=1)
+plt.scatter(vy[0], vy[1], s=1)
+plt.scatter(vz[0], vz[1], s=1)
+plt.show()
 
 
 # %% manual line detection
@@ -151,13 +177,13 @@ def get_input_lines(img, title='', min_lines=2):
 # print(lines_z)
 
 
-# %%
+# %% intersection by segments
 
-def find_intersection(lines):
-    A = np.zeros((len(lines), 2))
-    b = np.zeros(len(lines))
-    for i in range(len(lines)):
-        x1, y1, x2, y2 = lines[i]
+def find_intersection_by_segments(segments):
+    A = np.zeros((len(segments), 2))
+    b = np.zeros(len(segments))
+    for i in range(len(segments)):
+        x1, y1, x2, y2 = segments[i]
         if x1 == x2:
             A[i, 0] = 1
             A[i, 1] = 0
@@ -165,22 +191,22 @@ def find_intersection(lines):
         else:
             A[i, 0] = (y2 - y1) / (x2 - x1)
             A[i, 1] = -1
-            b[i] = np.dot(A[i, :], lines[i, :2])
+            b[i] = np.dot(A[i, :], segments[i, :2])
     return np.append(np.linalg.lstsq(A, b, rcond=None)[0], [1])
 
 
 plt.imshow(img_o)
 
-vx = find_intersection(lines_x)
-vy = find_intersection(lines_y)
-vz = find_intersection(lines_z)
+vx = find_intersection_by_segments(segments_x)
+vy = find_intersection_by_segments(segments_y)
+vz = find_intersection_by_segments(segments_z)
 
 plt.scatter(vx[0], vx[1], s=1)
 plt.scatter(vy[0], vy[1], s=1)
 # plt.scatter(vz[0], vz[1], s=1)
 plt.plot([vx[0], vy[0]], [vx[1], vy[1]], linewidth=1, marker='+')
 
-# for line in lines_z:
+# for line in segments_z:
 #     # plt.plot(line[::2], line[1:][::2], c='g')
 #     x1, y1, x2, y2 = line
 #     if x2 - x1 != 0:
