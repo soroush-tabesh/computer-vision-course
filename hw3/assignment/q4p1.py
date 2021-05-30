@@ -67,6 +67,6 @@ print(f'    train accuracy is {100 * nn_best[1]:.2f} and test accuracy is {100 *
 # best result using knn
 knn_value = 6
 knn_best = simple_knn_predictor(train_imgs, train_labels, test_imgs, test_labels,
-                                knn_val=knn_value, f_size=8, metric='distance', p=1)
+                                knn_val=knn_value, f_size=8, weights='distance', p=1)
 print(f'K Nearest Neighbor: with k={knn_value}')
 print(f'    train accuracy is {100 * knn_best[1]:.2f} and test accuracy is {100 * knn_best[2]:.2f}')
