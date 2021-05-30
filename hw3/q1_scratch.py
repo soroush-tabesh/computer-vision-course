@@ -3,7 +3,7 @@ import cv2 as cv
 import time
 import numpy as np
 from matplotlib import pyplot as plt
-from sklearn.cluster import spectral_clustering
+from sklearn.cluster import SpectralClustering
 from scipy.spatial.transform import Rotation
 
 
@@ -23,7 +23,8 @@ def imshow(*srcs, bgr=False, explicit=True):
         plt.show()
 
 
-img_o = plt.imread('./data/hw3/vns.jpg')
+img_o = plt.imread('./data/hw3/vns.jpg')[:, 600:]
+imshow(img_o)
 
 segments_x = np.array([[3542, 969, 3956, 1087],
                        [3604, 1283, 4014, 1376],
@@ -59,12 +60,12 @@ segments_z = np.array([[2099, 2057, 2068, 1259],
 img = img_o.copy()
 img = cv.GaussianBlur(img, (5, 5), 0)
 img = cv.cvtColor(img, cv.COLOR_RGB2GRAY)
-img = cv.morphologyEx(img, cv.MORPH_OPEN, np.ones((11, 11), dtype=np.uint8))
-edges = cv.Canny(img, 120, 3 * 120, L2gradient=True)
+img = cv.morphologyEx(img, cv.MORPH_OPEN, np.ones((23, 23), dtype=np.uint8))
+edges = cv.Canny(img, 110, 3 * 110, L2gradient=True)
 imshow(edges)
 
 # %%
-lines = cv.HoughLines(edges, 1, np.pi / 180, 150)
+lines = cv.HoughLines(edges, 1, np.pi / 180, 120)
 # lines = np.array(sorted(lines, key=lambda x: x[0, 1])[:])
 frame = np.zeros_like(img_o) + 255
 # frame = img_o.copy()
@@ -81,12 +82,12 @@ for line in lines:
     y2 = int(y0 - 10000 * a)
     cv.line(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
 plt.imshow(frame)
-for line in segments_x:
-    plt.plot(line[::2], line[1:][::2], c='y')
-for line in segments_y:
-    plt.plot(line[::2], line[1:][::2], c='r')
-for line in segments_z:
-    plt.plot(line[::2], line[1:][::2], c='b')
+# for line in segments_x:
+#     plt.plot(line[::2], line[1:][::2], c='y')
+# for line in segments_y:
+#     plt.plot(line[::2], line[1:][::2], c='r')
+# for line in segments_z:
+#     plt.plot(line[::2], line[1:][::2], c='b')
 plt.show()
 
 
@@ -99,19 +100,35 @@ def my_metric(p1, p2):
     return np.pi / 2 - min(d, np.pi - d)
 
 
-def auto_detect_axis_lines(src, sigma=5, morph=11, canny1=115, canny2=3 * 115, rho=1, theta=np.pi / 180,
-                           hough_thresh=150):
+def auto_detect_axis_lines(src, sigma=5, morph=23, canny1=120, canny2=3 * 120, rho=1, theta=np.pi / 180,
+                           hough_thresh=120, l2=True):
     src = src.copy()
     src = cv.GaussianBlur(src, (sigma, sigma), 0)
     src = cv.cvtColor(src, cv.COLOR_RGB2GRAY)
     src = cv.morphologyEx(src, cv.MORPH_OPEN, np.ones((morph, morph), dtype=np.uint8))
-    edges = cv.Canny(src, canny1, canny2, L2gradient=False)
+    edges = cv.Canny(src, canny1, canny2, L2gradient=l2)
     imshow(edges)
     lines = cv.HoughLines(edges, rho, theta, hough_thresh)
 
     dists = np.array([[my_metric(a[0, 1], b[0, 1]) for b in lines] for a in lines])
-    labels = spectral_clustering(dists, n_clusters=3, random_state=0)
-
+    labels = SpectralClustering(n_clusters=3, random_state=0, affinity='precomputed').fit_predict(dists)
+    # plt.scatter(lines[:, 0, 0], lines[:, 0, 1], c=labels)
+    # plt.show()
+    frame = np.zeros_like(img_o) + 255
+    col = [(255, 0, 0), (0, 255, 0), (0, 0, 255)]
+    for lb, line in zip(labels, lines):
+        rho, theta = line[0]
+        a = np.cos(theta)
+        b = np.sin(theta)
+        x0 = a * rho
+        y0 = b * rho
+        x1 = int(x0 + 10000 * (-b))
+        y1 = int(y0 + 10000 * a)
+        x2 = int(x0 - 10000 * (-b))
+        y2 = int(y0 - 10000 * a)
+        cv.line(frame, (x1, y1), (x2, y2), col[lb], 2)
+    plt.imshow(frame)
+    plt.show()
     return lines[labels == 0], lines[labels == 1], lines[labels == 2]
 
 
@@ -122,7 +139,7 @@ def find_intersection_by_lines(lines):
         r, theta = lines[i][0]
         A[i, :] = np.cos(theta), np.sin(theta)
         b[i] = r
-    return np.append(np.linalg.lstsq(A, b, rcond=None)[0], [1])
+    return np.round(np.append(np.linalg.lstsq(A, b, rcond=None)[0], [1])).astype(np.int)
 
 
 lines_z, lines_y, lines_x = auto_detect_axis_lines(img_o)
@@ -137,6 +154,25 @@ plt.scatter(vy[0], vy[1], s=5, label='y', marker='+')
 plt.scatter(vz[0], vz[1], s=5, label='z', marker='+')
 plt.legend()
 plt.show()
+
+
+def find_focal_principal(vpts):
+    A = np.array([[vpts[0][0] - vpts[2][0], vpts[0][1] - vpts[2][1]],
+                  [vpts[1][0] - vpts[2][0], vpts[1][1] - vpts[2][1]]])
+    b = np.array([vpts[1][0] * (vpts[0][0] - vpts[2][0]) + vpts[1][1] * (vpts[0][1] - vpts[2][1]),
+                  vpts[0][0] * (vpts[1][0] - vpts[2][0]) + vpts[0][1] * (vpts[1][1] - vpts[2][1])])
+    p = np.linalg.solve(A, b)
+    f2 = -p[0] ** 2 - p[1] ** 2 + (vpts[0][0] + vpts[1][0]) * p[0] + (vpts[0][1] + vpts[1][1]) * p[1] - (
+            vpts[0][0] * vpts[1][0] + vpts[0][1] * vpts[1][1])
+    return p, np.sqrt(f2)
+
+
+p, f = find_focal_principal([vx, vy, vz])
+print(p, f)
+K = np.array([[f, 0, p[0]],
+              [0, f, p[1]],
+              [0, 0, 1]])
+Ki = np.linalg.inv(K)
 
 
 # %% manual line detection
@@ -209,7 +245,7 @@ plt.imshow(img_o)
 vx = find_intersection_by_segments(segments_x)
 vy = find_intersection_by_segments(segments_y)
 vz = find_intersection_by_segments(segments_z)
-
+# %%
 # res01
 frame = np.zeros((img_o.shape[0] + 300, img_o.shape[1] + 300, 3), dtype=np.uint8)
 frame[:img_o.shape[0], :img_o.shape[1]] = img_o
