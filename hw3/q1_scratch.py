@@ -61,11 +61,11 @@ img = img_o.copy()
 img = cv.GaussianBlur(img, (5, 5), 0)
 img = cv.cvtColor(img, cv.COLOR_RGB2GRAY)
 img = cv.morphologyEx(img, cv.MORPH_OPEN, np.ones((23, 23), dtype=np.uint8))
-edges = cv.Canny(img, 110, 3 * 110, L2gradient=True)
+edges = cv.Canny(img, 120, 3 * 120, L2gradient=True)
 imshow(edges)
 
 # %%
-lines = cv.HoughLines(edges, 1, np.pi / 180, 120)
+lines = cv.HoughLines(edges, 1, np.pi / 180, 100)
 # lines = np.array(sorted(lines, key=lambda x: x[0, 1])[:])
 frame = np.zeros_like(img_o) + 255
 # frame = img_o.copy()
@@ -101,7 +101,7 @@ def my_metric(p1, p2):
 
 
 def auto_detect_axis_lines(src, sigma=5, morph=23, canny1=120, canny2=3 * 120, rho=1, theta=np.pi / 180,
-                           hough_thresh=120, l2=True):
+                           hough_thresh=110, l2=True):
     src = src.copy()
     src = cv.GaussianBlur(src, (sigma, sigma), 0)
     src = cv.cvtColor(src, cv.COLOR_RGB2GRAY)
@@ -142,7 +142,7 @@ def find_intersection_by_lines(lines):
     return np.round(np.append(np.linalg.lstsq(A, b, rcond=None)[0], [1])).astype(np.int)
 
 
-lines_z, lines_y, lines_x = auto_detect_axis_lines(img_o)
+lines_y, lines_z, lines_x = auto_detect_axis_lines(img_o)
 vx = find_intersection_by_lines(lines_x)
 vy = find_intersection_by_lines(lines_y)
 vz = find_intersection_by_lines(lines_z)
@@ -247,8 +247,9 @@ vy = find_intersection_by_segments(segments_y)
 vz = find_intersection_by_segments(segments_z)
 # %%
 # res01
-frame = np.zeros((img_o.shape[0] + 300, img_o.shape[1] + 300, 3), dtype=np.uint8)
-frame[:img_o.shape[0], :img_o.shape[1]] = img_o
+# frame = np.zeros((img_o.shape[0] + 300, img_o.shape[1] + 300, 3), dtype=np.uint8)
+# frame[:img_o.shape[0], :img_o.shape[1]] = img_o
+frame = img_o.copy()
 cv.line(frame, (vx[0], vx[1]), (vy[0], vy[1]), (255, 0, 0), 6)
 plt.imshow(frame)
 plt.show()
