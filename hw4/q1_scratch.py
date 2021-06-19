@@ -102,17 +102,23 @@ y[:len(tmp)] = 1
  y_train, y_valid) = train_test_split(X_train_file, y_train,
                                       stratify=y_train, test_size=2000, random_state=0, shuffle=True)
 
-# %% fit a scaler
-scaler = StandardScaler()
-for i, filename in enumerate(X_train_file):
-    print('\b' * 20, i, end='')
-    scaler.partial_fit([get_descriptor(get_image(filename))])
+# # %% fit a scaler
+# scaler = StandardScaler(with_mean=True, with_std=True)
+# for i, filename in enumerate(X_train_file):
+#     print('\b' * 20, i, end='')
+#     scaler.partial_fit([get_descriptor(get_image(filename))])
 
 # %% fit a gd linear svm
-sgd = linear_model.SGDClassifier()
+sgd = linear_model.SGDClassifier(loss='hinge',
+                                 penalty='l2',
+                                 fit_intercept=True,
+                                 alpha=0.0001,
+                                 shuffle=False,
+                                 learning_rate='optimal')
 for i, (filename, label) in enumerate(zip(X_train_file, y_train)):
     print('\b' * 20, i, end='')
     ft = get_descriptor(get_image(filename))
+    # ft = scaler.transform([ft])[0]
     sgd.partial_fit([ft], [label], classes=[0, 1])
 
 
@@ -151,6 +157,7 @@ def calculate_prc(y, y_pred, y_score):
 
 # %%
 eval_valid = evaluate_model(sgd, X_valid_file, y_valid)
+print(f'validation accuracy = {calculate_accuracy(y_valid, *eval_valid)}')
 sgd_threshold = eval_valid[1][eval_valid[1] > 0].mean() - 2 * eval_valid[1][eval_valid[1] > 0].std()
 # %%
 eval_test = evaluate_model(sgd, X_test_file, y_test)
@@ -198,6 +205,7 @@ def FaceDetection(clf, img, window_size=(128, 128),
                         frame_pos[tuple(pt1.astype(int))] = tuple(pt2.astype(int))
     peaks = feature.peak_local_max(frame_scores, 3 * stride)
     for peak in peaks:
+        # print(frame_scores[tuple(peak)])
         cv.rectangle(frame_res, tuple(peak)[::-1], tuple(frame_pos[tuple(peak)][::-1]), (255, 0, 0), 5)
     return frame_res
 
@@ -206,9 +214,9 @@ img1 = cv.imread('./data/hw4/Melli.jpg')
 img2 = cv.imread('./data/hw4/Persepolis.jpg')
 img3 = cv.imread('./data/hw4/Esteghlal.jpg')
 
-img1_det = FaceDetection(sgd, img1, scale_range=(0.5, 2), threshold=sgd_threshold)
-img2_det = FaceDetection(sgd, img2, scale_range=(0.5, 2), threshold=sgd_threshold)
-img3_det = FaceDetection(sgd, img3, scale_range=(0.5, 2), threshold=sgd_threshold)
+img1_det = FaceDetection(sgd, img1, scale_range=(1, 2), threshold=sgd_threshold)
+img2_det = FaceDetection(sgd, img2, scale_range=(0.5, 1.5), threshold=sgd_threshold)
+img3_det = FaceDetection(sgd, img3, scale_range=(0.5, 1.5), threshold=sgd_threshold)
 # %%
 cv.imwrite('./hw4/assignment/out/res4.jpg', img1_det)
 cv.imwrite('./hw4/assignment/out/res5.jpg', img2_det)
