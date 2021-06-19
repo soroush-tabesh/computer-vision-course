@@ -25,6 +25,24 @@ def get_all_files(path, pat='jpg'):
     return list_of_files
 
 
+# load data
+X_file = []
+tmp = utils.shuffle(get_all_files(positive_image_path), random_state=0)
+X_file += tmp
+X_file += utils.shuffle(get_all_files(negative_image_path), random_state=0)
+y = np.zeros(len(X_file), dtype=np.int32)
+y[:len(tmp)] = 1
+
+# split data
+(X_train_file, X_test_file,
+ y_train, y_test) = train_test_split(X_file, y,
+                                     stratify=y, test_size=2000, random_state=0, shuffle=True)
+(X_train_file, X_valid_file,
+ y_train, y_valid) = train_test_split(X_train_file, y_train,
+                                      stratify=y_train, test_size=2000, random_state=0, shuffle=True)
+
+
+# %% fit a gd linear svm
 def get_image(filename, size=(128, 128), margin=(50, 50, 50, 50), min_size=(150, 150)):
     src = cv.imread(filename)
     if src.shape[0] > min_size[0] and src.shape[1] > min_size[1]:
@@ -43,23 +61,6 @@ def get_descriptor(src, cell_size=(8, 8), block_size=(2, 2), n_bins=9):
     return hog.compute(src).ravel()
 
 
-# load data
-X_file = []
-tmp = utils.shuffle(get_all_files(positive_image_path), random_state=0)
-X_file += tmp
-X_file += utils.shuffle(get_all_files(negative_image_path), random_state=0)
-y = np.zeros(len(X_file), dtype=np.int32)
-y[:len(tmp)] = 1
-
-# split data
-(X_train_file, X_test_file,
- y_train, y_test) = train_test_split(X_file, y,
-                                     stratify=y, test_size=2000, random_state=0, shuffle=True)
-(X_train_file, X_valid_file,
- y_train, y_valid) = train_test_split(X_train_file, y_train,
-                                      stratify=y_train, test_size=2000, random_state=0, shuffle=True)
-
-# %% fit a gd linear svm
 print('Fitting the Classifier')
 sgd = linear_model.SGDClassifier(loss='hinge',
                                  penalty='l2',
@@ -106,7 +107,6 @@ def calculate_prc(y, y_pred, y_score):
 # %% evaluate validation data and tune parameters
 eval_valid = evaluate_model(sgd, X_valid_file, y_valid)
 print(f'validation accuracy = {calculate_accuracy(y_valid, *eval_valid)}')
-sgd_threshold = eval_valid[1][eval_valid[1] > 0].mean() - 2 * eval_valid[1][eval_valid[1] > 0].std()
 
 # %% evaluate test data
 eval_test = evaluate_model(sgd, X_test_file, y_test)
@@ -160,6 +160,8 @@ print('Starting face detection')
 img1 = cv.imread('./data/hw4/Melli.jpg')
 img2 = cv.imread('./data/hw4/Persepolis.jpg')
 img3 = cv.imread('./data/hw4/Esteghlal.jpg')
+
+sgd_threshold = eval_valid[1][eval_valid[1] > 0].mean() - 2 * eval_valid[1][eval_valid[1] > 0].std()
 
 img1_det = FaceDetection(sgd, img1, scale_range=(1, 2), threshold=sgd_threshold)
 img2_det = FaceDetection(sgd, img2, scale_range=(0.5, 1.5), threshold=sgd_threshold)
