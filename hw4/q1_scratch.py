@@ -206,10 +206,11 @@ def FaceDetection(clf, img, window_size=(128, 128),
     peaks = feature.peak_local_max(frame_scores, 3 * stride)
     for peak in peaks:
         # print(frame_scores[tuple(peak)])
-        cv.rectangle(frame_res, tuple(peak)[::-1], tuple(frame_pos[tuple(peak)][::-1]), (255, 0, 0), 5)
+        cv.rectangle(frame_res, tuple(peak)[::-1], tuple(frame_pos[tuple(peak)][::-1]), (0, 255, 0), 3)
     return frame_res
 
 
+# %%
 img1 = cv.imread('./data/hw4/Melli.jpg')
 img2 = cv.imread('./data/hw4/Persepolis.jpg')
 img3 = cv.imread('./data/hw4/Esteghlal.jpg')
